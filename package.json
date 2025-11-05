@@ -1,0 +1,38 @@
+{
+  "name": "@lsmacedo/apicli",
+  "version": "1.0.0",
+  "bin": {
+    "apicli": "./dist/cli.js"
+  },
+  "scripts": {
+    "dev": "ts-node src/cli.ts",
+    "test": "jest",
+    "lint": "eslint . && prettier \"**/*.ts\" --check",
+    "build": "tsc && tsc-alias"
+  },
+  "author": "lsmacedo",
+  "description": "Terminal-based API client",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.9.2",
+    "@types/yargs": "^17.0.34",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "eslint": "^9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "jest": "^30.2.0",
+    "prettier": "^3.6.2",
+    "ts-jest": "^29.4.5",
+    "ts-node": "^10.9.2",
+    "tsc-alias": "^1.8.16",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "yargs": "^17.7.2",
+    "zod": "^4.1.12"
+  }
+}
