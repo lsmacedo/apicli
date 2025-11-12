@@ -9,6 +9,7 @@ import {
 type RequestData = {
   url: string;
   headers: Record<string, string>;
+  body: URLSearchParams | undefined;
   method: string;
 };
 
@@ -21,14 +22,16 @@ export const buildRequestData = (
 
   const url = buildUrl(operation.url, params.query, params.path, paramValues);
   const headers = buildHeaders(params.headers, paramValues);
+  const body = buildBody(operation.contentType, params.body, paramValues);
 
-  return { url, headers, method };
+  return { url, headers, body, method };
 };
 
 export const executeRequest = async (requestData: RequestData) => {
   return fetch(requestData.url, {
     method: requestData.method,
     headers: requestData.headers,
+    body: requestData.body,
   });
 };
 
@@ -37,6 +40,7 @@ const groupParamsByLocation = (paramDefinitions: ParamDefinitions) => {
     query: [],
     headers: [],
     path: [],
+    body: [],
   };
 
   for (const param of Object.values(paramDefinitions)) {
@@ -92,4 +96,27 @@ const buildHeaders = (
     headers[param.name] = value;
   }
   return headers;
+};
+
+const buildBody = (
+  contentType: Operation['contentType'],
+  bodyParams: ParamDefinition[],
+  paramValues: ParamValues
+) => {
+  switch (contentType) {
+    case 'application/x-www-form-urlencoded':
+      return buildSearchParams(bodyParams, paramValues);
+  }
+};
+
+const buildSearchParams = (
+  params: ParamDefinition[],
+  paramValues: ParamValues
+) => {
+  const searchParams = new URLSearchParams();
+  for (const param of params) {
+    const value = paramValues[param.name] ?? param.default;
+    searchParams.append(param.name, value);
+  }
+  return searchParams;
 };

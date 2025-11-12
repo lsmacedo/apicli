@@ -6,7 +6,7 @@ export type ParamDefinition = {
   default?: string | number | boolean;
 };
 
-export type ParamLocation = 'query' | 'headers' | 'path';
+export type ParamLocation = 'query' | 'headers' | 'path' | 'body';
 
 export type ParamValues = Record<string, string>;
 

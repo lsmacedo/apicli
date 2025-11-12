@@ -9,6 +9,7 @@ export type Operation = {
   name: string;
   url: string;
   method: string;
+  contentType?: 'application/x-www-form-urlencoded';
   params: ParamDefinitions;
 };
 
@@ -28,6 +29,7 @@ const collectionFileSchema = z.object({
       z.object({
         query: z.array(paramSchema).default([]),
         headers: z.array(paramSchema).default([]),
+        body: z.array(paramSchema).default([]),
       })
     )
     .default({}),
@@ -36,10 +38,12 @@ const collectionFileSchema = z.object({
       z.string(),
       z.object({
         path: z.string(),
-        method: z.enum(['GET']),
+        method: z.enum(['GET', 'POST']),
+        contentType: z.enum(['application/x-www-form-urlencoded']).optional(),
         use: z.array(z.string()).default([]),
         query: z.array(paramSchema).default([]),
         headers: z.array(paramSchema).default([]),
+        body: z.array(paramSchema).default([]),
       })
     )
     .default({}),
@@ -66,12 +70,14 @@ export const parseCollectionConfig = (data: string): Collection => {
 
     Object.assign(params, parseParamsArray(operation.headers, 'headers'));
     Object.assign(params, parseParamsArray(operation.query, 'query'));
+    Object.assign(params, parseParamsArray(operation.body, 'body'));
     Object.assign(params, extractPathParams(operation.path));
 
     operations[name] = {
       name,
       url: `${collection.baseUrl}${operation.path}`,
       method: operation.method,
+      contentType: operation.contentType,
       params,
     };
   }
