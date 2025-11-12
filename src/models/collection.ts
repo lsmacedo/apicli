@@ -12,14 +12,22 @@ export type Operation = {
   params: ParamDefinitions;
 };
 
+const paramSchema = z.union([
+  z.string(),
+  z.object({
+    name: z.string(),
+    default: z.union([z.string(), z.number(), z.boolean()]).optional(),
+  }),
+]);
+
 const collectionFileSchema = z.object({
   baseUrl: z.string().default(''),
   shared: z
     .record(
       z.string(),
       z.object({
-        query: z.array(z.string()).default([]),
-        headers: z.array(z.string()).default([]),
+        query: z.array(paramSchema).default([]),
+        headers: z.array(paramSchema).default([]),
       })
     )
     .default({}),
@@ -30,8 +38,8 @@ const collectionFileSchema = z.object({
         path: z.string(),
         method: z.enum(['GET']),
         use: z.array(z.string()).default([]),
-        query: z.array(z.string()).default([]),
-        headers: z.array(z.string()).default([]),
+        query: z.array(paramSchema).default([]),
+        headers: z.array(paramSchema).default([]),
       })
     )
     .default({}),
@@ -74,12 +82,14 @@ export const parseCollectionConfig = (data: string): Collection => {
 };
 
 const parseParamsArray = (
-  params: string[],
+  params: z.infer<typeof paramSchema>[],
   location: ParamLocation
 ): ParamDefinitions => {
   const result: ParamDefinitions = {};
   for (const param of params) {
-    result[param] = { name: param, location };
+    const parsed = typeof param === 'string' ? { name: param } : param;
+
+    result[parsed.name] = { ...parsed, location };
   }
   return result;
 };

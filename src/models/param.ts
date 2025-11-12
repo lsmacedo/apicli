@@ -1,12 +1,12 @@
-export type ParamLocation = 'query' | 'headers' | 'path';
+export type ParamDefinitions = Record<string, ParamDefinition>;
 
-export type ParamDefinitions = Record<
-  string,
-  {
-    name: string;
-    location: 'query' | 'headers' | 'path';
-  }
->;
+export type ParamDefinition = {
+  name: string;
+  location: ParamLocation;
+  default?: string | number | boolean;
+};
+
+export type ParamLocation = 'query' | 'headers' | 'path';
 
 export type ParamValues = Record<string, string>;
 

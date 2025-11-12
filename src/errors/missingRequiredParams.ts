@@ -1,5 +1,9 @@
+import { ParamDefinition } from '@src/models/param';
+
 export class MissingRequiredParamsError extends Error {
-  constructor(missingParams: string[]) {
-    super(`Missing the following required params: ${missingParams.join(', ')}`);
+  constructor(missingParams: ParamDefinition[]) {
+    super(
+      `Missing the following required params: ${missingParams.map((param) => param.name).join(', ')}`
+    );
   }
 }

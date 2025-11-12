@@ -44,8 +44,10 @@ const getMissingParams = (
   paramDefinitions: ParamDefinitions,
   paramValues: ParamValues
 ) =>
-  Object.keys(paramDefinitions).filter(
-    (param) => !Object.keys(paramValues).includes(param)
+  Object.values(paramDefinitions).filter(
+    (param) =>
+      param.default === undefined &&
+      !Object.keys(paramValues).includes(param.name)
   );
 
 const printResponse = async (response: Response) => {

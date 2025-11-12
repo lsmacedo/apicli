@@ -1,5 +1,6 @@
 import { Operation } from '@src/models/collection';
 import {
+  ParamDefinition,
   ParamDefinitions,
   ParamLocation,
   ParamValues,
@@ -32,14 +33,14 @@ export const executeRequest = async (requestData: RequestData) => {
 };
 
 const groupParamsByLocation = (paramDefinitions: ParamDefinitions) => {
-  const grouped: Record<ParamLocation, string[]> = {
+  const grouped: Record<ParamLocation, ParamDefinition[]> = {
     query: [],
     headers: [],
     path: [],
   };
 
   for (const param of Object.values(paramDefinitions)) {
-    grouped[param.location].push(param.name);
+    grouped[param.location].push(param);
   }
 
   return grouped;
@@ -47,8 +48,8 @@ const groupParamsByLocation = (paramDefinitions: ParamDefinitions) => {
 
 const buildUrl = (
   url: string,
-  queryParams: string[],
-  pathParams: string[],
+  queryParams: ParamDefinition[],
+  pathParams: ParamDefinition[],
   paramValues: ParamValues
 ) => {
   const urlWithQueryParams = applyQueryParams(url, queryParams, paramValues);
@@ -57,35 +58,38 @@ const buildUrl = (
 
 const applyQueryParams = (
   url: string,
-  queryParams: string[],
+  queryParams: ParamDefinition[],
   paramValues: ParamValues
 ) => {
   const newUrl = new URL(url);
   for (const param of queryParams) {
-    const value = paramValues[param];
-    newUrl.searchParams.append(param, value);
+    const value = paramValues[param.name] ?? param.default;
+    newUrl.searchParams.append(param.name, value);
   }
   return newUrl.href;
 };
 
 const applyPathParams = (
   url: string,
-  pathParams: string[],
+  pathParams: ParamDefinition[],
   paramValues: ParamValues
 ) => {
   const newUrl = new URL(url);
   for (const param of pathParams) {
-    const value = paramValues[param];
+    const value = paramValues[param.name] ?? param.default;
     newUrl.pathname = newUrl.pathname.replace(`%7B${param}%7D`, value);
   }
   return newUrl.href;
 };
 
-const buildHeaders = (headerParams: string[], paramValues: ParamValues) => {
+const buildHeaders = (
+  headerParams: ParamDefinition[],
+  paramValues: ParamValues
+) => {
   const headers: Record<string, string> = {};
   for (const param of headerParams) {
-    const value = paramValues[param];
-    headers[param] = value;
+    const value = paramValues[param.name] ?? param.default;
+    headers[param.name] = value;
   }
   return headers;
 };
