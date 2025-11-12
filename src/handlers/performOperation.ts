@@ -10,6 +10,7 @@ import {
   getCollectionEnv,
 } from '@src/services/collectionService';
 import { buildRequestData, executeRequest } from '@src/services/requestService';
+import { readStdin } from '@src/utils/stdin';
 
 export const performOperation = async (
   collectionName: string,
@@ -24,8 +25,11 @@ export const performOperation = async (
     throw new OperationNotFoundError(operationName, availableOperations);
   }
 
+  const stdin = (await readStdin()) ?? '';
+
   const paramValues: ParamValues = {
     ...getCollectionEnv(collectionName),
+    ...parseParamValueStrings([stdin]),
     ...parseParamValueStrings(cliParams),
   };
 

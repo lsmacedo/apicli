@@ -81,7 +81,7 @@ const applyPathParams = (
   const newUrl = new URL(url);
   for (const param of pathParams) {
     const value = paramValues[param.name] ?? param.default;
-    newUrl.pathname = newUrl.pathname.replace(`%7B${param}%7D`, value);
+    newUrl.pathname = newUrl.pathname.replace(`%7B${param.name}%7D`, value);
   }
   return newUrl.href;
 };
