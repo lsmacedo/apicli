@@ -1,28 +1,52 @@
 import z from 'zod';
-import { ParamDefinitions, ParamLocation } from '@src/models/param';
+
+export type CollectionInput = z.input<typeof collectionFileSchema>;
 
 export type Collection = {
+  name: string;
+  description: string;
   operations: Record<string, Operation>;
 };
 
 export type Operation = {
   name: string;
   url: string;
-  method: string;
-  contentType?: 'application/x-www-form-urlencoded';
-  params: ParamDefinitions;
+  method: Method;
+  contentType: ContentType | undefined;
+  bodyTemplate: string | undefined;
+  params: ParamDefinition[];
 };
+
+export type ParamDefinition = {
+  name: string;
+  location: ParamLocation;
+  optional: boolean;
+  default: string | number | boolean | undefined;
+};
+
+export type Method = (typeof methods)[number];
+export type ParamLocation = (typeof paramLocations)[number];
+export type ContentType = (typeof contentTypes)[number];
+
+export const methods = ['GET', 'POST', 'PATCH', 'PUT', 'DELETE'] as const;
+export const paramLocations = ['path', 'headers', 'query', 'body'] as const;
+export const contentTypes = [
+  'application/x-www-form-urlencoded',
+  'application/json',
+] as const;
 
 const paramSchema = z.union([
   z.string(),
   z.object({
     name: z.string(),
+    optional: z.boolean().default(false),
     default: z.union([z.string(), z.number(), z.boolean()]).optional(),
   }),
 ]);
 
 const collectionFileSchema = z.object({
   baseUrl: z.string().default(''),
+  description: z.string().default(''),
   shared: z
     .record(
       z.string(),
@@ -38,51 +62,68 @@ const collectionFileSchema = z.object({
       z.string(),
       z.object({
         path: z.string(),
-        method: z.enum(['GET', 'POST']),
-        contentType: z.enum(['application/x-www-form-urlencoded']).optional(),
+        method: z.enum(methods),
+        contentType: z.enum(contentTypes).optional(),
         use: z.array(z.string()).default([]),
-        query: z.array(paramSchema).default([]),
-        headers: z.array(paramSchema).default([]),
-        body: z.array(paramSchema).default([]),
+        bodyTemplate: z.any().optional(),
+        params: z
+          .object({
+            path: z.array(paramSchema).default([]),
+            headers: z.array(paramSchema).default([]),
+            query: z.array(paramSchema).default([]),
+            body: z.array(paramSchema).default([]),
+          })
+          .default({ path: [], headers: [], query: [], body: [] }),
       })
     )
     .default({}),
 });
 
-export const parseCollectionConfig = (data: string): Collection => {
+export const parseCollectionConfig = (
+  collectionName: string,
+  data: string
+): Collection => {
   const collection = collectionFileSchema.parse(JSON.parse(data));
 
-  const sharedParams: Record<string, ParamDefinitions> = {};
+  const sharedParams: Record<string, ParamDefinition[]> = {};
   for (const [name, config] of Object.entries(collection.shared)) {
-    sharedParams[name] = {
+    sharedParams[name] = [
       ...parseParamsArray(config.headers, 'headers'),
       ...parseParamsArray(config.query, 'query'),
-    };
+      ...parseParamsArray(config.body, 'body'),
+    ];
   }
 
   const operations: Record<string, Operation> = {};
   for (const [name, operation] of Object.entries(collection.operations)) {
-    const params: ParamDefinitions = {};
+    const params: ParamDefinition[] = [];
 
     for (const sharedName of operation.use) {
-      Object.assign(params, sharedParams[sharedName]);
+      params.push(...Object.values(sharedParams[sharedName]));
     }
 
-    Object.assign(params, parseParamsArray(operation.headers, 'headers'));
-    Object.assign(params, parseParamsArray(operation.query, 'query'));
-    Object.assign(params, parseParamsArray(operation.body, 'body'));
-    Object.assign(params, extractPathParams(operation.path));
+    params.push(...extractPathParams(operation.path, operation.params.path));
+    params.push(...parseParamsArray(operation.params.headers, 'headers'));
+    params.push(...parseParamsArray(operation.params.query, 'query'));
+    params.push(
+      ...extractBodyParams(operation.bodyTemplate, operation.params.body)
+    );
 
     operations[name] = {
       name,
       url: `${collection.baseUrl}${operation.path}`,
       method: operation.method,
-      contentType: operation.contentType,
+      bodyTemplate: operation.bodyTemplate
+        ? JSON.stringify(operation.bodyTemplate, null, 2)
+        : undefined,
+      contentType: operation.contentType ?? inferContentType(operation),
       params,
     };
   }
 
   return {
+    name: collectionName,
+    description: collection.description,
     operations,
   };
 };
@@ -90,18 +131,61 @@ export const parseCollectionConfig = (data: string): Collection => {
 const parseParamsArray = (
   params: z.infer<typeof paramSchema>[],
   location: ParamLocation
-): ParamDefinitions => {
-  const result: ParamDefinitions = {};
+): ParamDefinition[] => {
+  const result: ParamDefinition[] = [];
   for (const param of params) {
-    const parsed = typeof param === 'string' ? { name: param } : param;
+    const parsed =
+      typeof param === 'string' ? { name: param, optional: false } : param;
 
-    result[parsed.name] = { ...parsed, location };
+    result.push({
+      name: parsed.name,
+      location,
+      optional: parsed.optional,
+      default: parsed.default,
+    });
   }
   return result;
 };
 
-const extractPathParams = (url: string): ParamDefinitions =>
-  parseParamsArray(
+const extractPathParams = (
+  url: string,
+  pathParams: z.infer<typeof paramSchema>[]
+): ParamDefinition[] => {
+  const inferredParams = parseParamsArray(
     [...url.matchAll(/\{([^}]+)\}/g)].map((match) => match[1]),
     'path'
   );
+  const definedParams = parseParamsArray(pathParams, 'path');
+  return inferredParams.map(
+    (param) => definedParams.find(({ name }) => name === param.name) ?? param
+  );
+};
+
+const extractBodyParams = (
+  bodyTemplate: string,
+  bodyParams: z.infer<typeof paramSchema>[]
+): ParamDefinition[] => {
+  const definedParams = parseParamsArray(bodyParams, 'body');
+
+  if (!bodyTemplate) {
+    return definedParams;
+  }
+
+  const template = JSON.stringify(bodyTemplate, null, 2);
+  const inferredParams = parseParamsArray(
+    [...template.matchAll(/\{([^}\s]+)\}/g)].map((match) => match[1]),
+    'body'
+  );
+  return inferredParams.map(
+    (param) => definedParams.find(({ name }) => name === param.name) ?? param
+  );
+};
+
+const inferContentType = (
+  operation: z.infer<typeof collectionFileSchema>['operations'][string]
+): ContentType | undefined => {
+  if (!operation.bodyTemplate) {
+    return undefined;
+  }
+  return 'application/json';
+};

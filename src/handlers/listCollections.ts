@@ -1,14 +1,16 @@
 import { getCollectionsList } from '@src/services/collectionService';
+import { askForOption } from '@src/services/promptService';
+import { listOperations } from '@src/handlers/listOperations';
 
 export const listCollections = async () => {
   const collections = await getCollectionsList();
 
   if (!collections) {
-    console.log('There are no collections available');
+    console.error('There are no collections available');
     return;
   }
 
-  for (const collection of collections) {
-    console.log(collection);
-  }
+  const collectionName = await askForOption('Pick a collection', collections);
+
+  await listOperations(collectionName);
 };

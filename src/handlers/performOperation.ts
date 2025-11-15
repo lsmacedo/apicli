@@ -1,16 +1,15 @@
-import { MissingRequiredParamsError } from '@src/errors/missingRequiredParams';
-import { OperationNotFoundError } from '@src/errors/operationNotFound';
 import {
-  ParamDefinitions,
-  ParamValues,
+  ParamValue,
   parseParamValueStrings,
-} from '@src/models/param';
+  resolveValue,
+} from '@src/models/paramValue';
 import {
   getCollectionConfig,
   getCollectionEnv,
 } from '@src/services/collectionService';
+import { OperationNotFoundError } from '@src/errors/operationNotFound';
+import { askForParams } from '@src/services/promptService';
 import { buildRequestData, executeRequest } from '@src/services/requestService';
-import { readStdin } from '@src/utils/stdin';
 
 export const performOperation = async (
   collectionName: string,
@@ -25,34 +24,33 @@ export const performOperation = async (
     throw new OperationNotFoundError(operationName, availableOperations);
   }
 
-  const stdin = (await readStdin()) ?? '';
+  const envValues = getCollectionEnv(collectionName);
+  const cliValues = parseParamValueStrings(cliParams);
 
-  const paramValues: ParamValues = {
-    ...getCollectionEnv(collectionName),
-    ...parseParamValueStrings([stdin]),
-    ...parseParamValueStrings(cliParams),
-  };
+  const promptValues = await askForParams(
+    'Provide the operation params',
+    operation.params.map((param) => ({
+      name: param.name,
+      optional: param.optional,
+      defaultValue: resolveValue(param, cliValues),
+      disabled: envValues.some((value) => value.name === param.name),
+    }))
+  );
 
-  const missingParams = getMissingParams(operation.params, paramValues);
-  if (missingParams.length > 0) {
-    throw new MissingRequiredParamsError(missingParams);
-  }
+  const parsedValues: ParamValue[] = Object.entries(promptValues)
+    .filter(([, value]) => value)
+    .map(([name, value]) => ({
+      name,
+      value,
+    }));
+  const combinedValues = [...envValues, ...parsedValues];
 
-  const requestData = buildRequestData(operation, paramValues);
+  const requestData = buildRequestData(operation, combinedValues);
+
   const response = await executeRequest(requestData);
 
   await printResponse(response);
 };
-
-const getMissingParams = (
-  paramDefinitions: ParamDefinitions,
-  paramValues: ParamValues
-) =>
-  Object.values(paramDefinitions).filter(
-    (param) =>
-      param.default === undefined &&
-      !Object.keys(paramValues).includes(param.name)
-  );
 
 const printResponse = async (response: Response) => {
   const text = await response.text();
