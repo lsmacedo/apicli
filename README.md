@@ -2,6 +2,8 @@
 
 A simple, fast CLI tool to interact with APIs from the terminal.
 
+<img src="https://github.com/user-attachments/assets/1c916264-2bb0-4be2-9978-45c403fd14fe" width="600">
+
 ## Quick Start
 
 1. **Install the CLI**:
@@ -38,28 +40,5 @@ apicli fakebank getById id=1
 ## Config file
 
 The CLI looks for collection config files inside the `~/.apicli` directory. The
-file must follow the name pattern `<collectionName>.json` and have the following
-schema:
-
-```js
-{
-  "baseUrl": "<string>",
-  "shared": {
-    "reusableItem1": {
-      "headers": ["<string>"]
-      "query": ["<string>"]
-    },
-    "reusableItem2": {...}
-  },
-  "operations": {
-    "operation1": {
-      "path": "<string>",
-      "method": "<string>",
-      "use": ["<string>"],
-      "headers": ["<string>"]
-      "query": ["<string>"]
-    },
-    "operation2": {...}
-  }
-}
-```
+file must follow the name pattern `<collectionName>.json`.
+Documentation and examples will be added soon.
