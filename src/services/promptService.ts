@@ -37,20 +37,28 @@ export const askForParams = (message: string, options: PromptParam[]) => {
       name: option.name,
       initial: option.defaultValue,
       disabled: option.disabled ? 'Hidden' : false,
-      validate: option.optional ? undefined : (val) => !!val.trim(),
+      validate: (val) => validateOption(val, option),
     })),
     validate: (val) => {
       if (typeof val === 'string') {
+        // Making typescript happy
         return false;
       }
-      const isMissingRequiredParam = options.some(
-        (option) => !option.optional && !val[option.name].trim()
+      const hasInvalidOption = options.some(
+        (option) => !validateOption(val[option.name], option)
       );
-      return isMissingRequiredParam
+      return hasInvalidOption
         ? 'Fill all required fields before submitting'
         : true;
     },
   });
+};
+
+const validateOption = (val: string, option: PromptParam) => {
+  if (option.optional || option.disabled) {
+    return true;
+  }
+  return Boolean(val.trim());
 };
 
 const buildPrompt = async <T>(promptType: PromptType, opts: Prompt) => {
