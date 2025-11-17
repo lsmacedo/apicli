@@ -5,7 +5,7 @@ import { performOperation } from '@src/handlers/performOperation';
 export const listOperations = async (collectionName: string) => {
   const config = await getCollectionConfig(collectionName);
   const operations = Object.values(config.operations ?? []).sort((a, b) =>
-    a.name < b.name ? -1 : 1
+    a.name.localeCompare(b.name)
   );
 
   if (!operations.length) {
