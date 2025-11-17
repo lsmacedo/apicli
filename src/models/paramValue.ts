@@ -31,20 +31,5 @@ export const resolveValue = (
     return value;
   }
 
-  if (paramDefinition.default !== undefined) {
-    return String(paramDefinition.default);
-  }
-
-  return undefined;
+  return paramDefinition.default;
 };
-
-export const getMissingParams = (
-  paramDefinitions: ParamDefinition[],
-  paramValues: ParamValue[]
-) =>
-  paramDefinitions.filter(
-    (param) =>
-      param.default === undefined &&
-      param.optional === false &&
-      !paramValues.some(({ name }) => name === param.name)
-  );
