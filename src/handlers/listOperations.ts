@@ -9,7 +9,7 @@ export const listOperations = async (collectionName: string) => {
   );
 
   if (!operations.length) {
-    console.log('The collection is empty');
+    console.error('The collection is empty');
     return;
   }
 
