@@ -21,7 +21,7 @@ export type ParamDefinition = {
   name: string;
   location: ParamLocation;
   optional: boolean;
-  default: string | number | boolean | undefined;
+  default: string | undefined;
 };
 
 export type Method = (typeof methods)[number];
@@ -40,7 +40,7 @@ const paramSchema = z.union([
   z.object({
     name: z.string(),
     optional: z.boolean().default(false),
-    default: z.union([z.string(), z.number(), z.boolean()]).optional(),
+    default: z.string().optional(),
   }),
 ]);
 
@@ -85,29 +85,28 @@ export const parseCollectionConfig = (
 ): Collection => {
   const collection = collectionFileSchema.parse(JSON.parse(data));
 
-  const sharedParams: Record<string, ParamDefinition[]> = {};
-  for (const [name, config] of Object.entries(collection.shared)) {
-    sharedParams[name] = [
-      ...parseParamsArray(config.headers, 'headers'),
-      ...parseParamsArray(config.query, 'query'),
-      ...parseParamsArray(config.body, 'body'),
-    ];
-  }
-
   const operations: Record<string, Operation> = {};
   for (const [name, operation] of Object.entries(collection.operations)) {
-    const params: ParamDefinition[] = [];
+    const shared = {
+      headers: [] as ParamDefinition[],
+      query: [] as ParamDefinition[],
+      body: [] as ParamDefinition[],
+    };
 
-    for (const sharedName of operation.use) {
-      params.push(...Object.values(sharedParams[sharedName]));
+    for (const s of ['headers', 'query', 'body'] as const) {
+      for (const u of operation.use) {
+        const params = collection.shared[u];
+        shared[s].push(...parseParamsArray(params[s], s));
+      }
     }
 
-    params.push(...extractPathParams(operation.path, operation.params.path));
-    params.push(...parseParamsArray(operation.params.headers, 'headers'));
-    params.push(...parseParamsArray(operation.params.query, 'query'));
-    params.push(
-      ...extractBodyParams(operation.bodyTemplate, operation.params.body)
-    );
+    const params = extractPathParams(operation.path, operation.params.path)
+      .concat(shared.headers)
+      .concat(parseParamsArray(operation.params.headers, 'headers'))
+      .concat(shared.query)
+      .concat(parseParamsArray(operation.params.query, 'query'))
+      .concat(shared.body)
+      .concat(extractBodyParams(operation.bodyTemplate, operation.params.body));
 
     operations[name] = {
       name,
