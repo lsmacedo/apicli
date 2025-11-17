@@ -30,11 +30,10 @@ npm install -g @lsmacedo/apicli
 }
 ```
 
-2. **Use it**:
+3. **Use it**:
 
 ```bash
-apicli fakebank listAccounts
-apicli fakebank getById id=1
+apicli
 ```
 
 ## Config file
