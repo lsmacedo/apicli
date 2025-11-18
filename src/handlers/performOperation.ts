@@ -14,7 +14,8 @@ import { buildRequestData, executeRequest } from '@src/services/requestService';
 export const performOperation = async (
   collectionName: string,
   operationName: string,
-  cliParams: string[]
+  cliParams: string[],
+  env: string | undefined
 ) => {
   const collection = await getCollectionConfig(collectionName);
   const operation = collection.operations[operationName];
@@ -24,7 +25,7 @@ export const performOperation = async (
     throw new OperationNotFoundError(operationName, availableOperations);
   }
 
-  const envValues = getCollectionEnv(collectionName);
+  const envValues = getCollectionEnv(collectionName, env);
   const cliValues = parseParamValueStrings(cliParams);
 
   const promptValues = await askForParams(

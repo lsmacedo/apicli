@@ -100,9 +100,9 @@ export const parseCollectionConfig = (
       }
     }
 
-    const params = extractPathParams(operation.path, operation.params.path)
-      .concat(shared.headers)
+    const params = shared.headers
       .concat(parseParamsArray(operation.params.headers, 'headers'))
+      .concat(extractPathParams(operation.path, operation.params.path))
       .concat(shared.query)
       .concat(parseParamsArray(operation.params.query, 'query'))
       .concat(shared.body)

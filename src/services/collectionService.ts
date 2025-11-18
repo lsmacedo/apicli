@@ -21,8 +21,27 @@ export const getCollectionConfig = async (
   return parseCollectionConfig(collectionName, await readFile(path));
 };
 
-export const getCollectionEnv = (collectionName: string): ParamValue[] => {
-  const path = join(getConfigPath(), `${collectionName}.env`);
-  const { parsed } = dotenv.config({ path, quiet: true });
-  return Object.entries(parsed || {}).map(([name, value]) => ({ name, value }));
+export const getCollectionEnv = (
+  collectionName: string,
+  env: string | undefined
+): ParamValue[] => {
+  const paths = [join(getConfigPath(), `${collectionName}.env`)];
+  if (env) {
+    paths.push(join(getConfigPath(), `${collectionName}.env.${env}`));
+  }
+
+  const { parsed } = dotenv.config({ path: paths, quiet: true });
+
+  return Object.entries(parsed ?? {}).map(([name, value]) => ({ name, value }));
+};
+
+export const getEnvironmentsList = async (
+  collectionName: string
+): Promise<string[]> => {
+  const fileNames = await listFiles(getConfigPath());
+  const regex = new RegExp(`${collectionName}\.env\.(.+)`);
+  return fileNames
+    .map((name) => name.match(regex)?.[1])
+    .filter((match): match is string => !!match)
+    .map((match) => match);
 };

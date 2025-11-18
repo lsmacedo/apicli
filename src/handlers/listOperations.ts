@@ -2,7 +2,10 @@ import { getCollectionConfig } from '@src/services/collectionService';
 import { askForOption } from '@src/services/promptService';
 import { performOperation } from '@src/handlers/performOperation';
 
-export const listOperations = async (collectionName: string) => {
+export const listOperations = async (
+  collectionName: string,
+  env: string | undefined
+) => {
   const config = await getCollectionConfig(collectionName);
   const operations = Object.values(config.operations ?? []).sort((a, b) =>
     a.name.localeCompare(b.name)
@@ -18,5 +21,5 @@ export const listOperations = async (collectionName: string) => {
     operations.map(({ name }) => name)
   );
 
-  await performOperation(collectionName, operation, []);
+  await performOperation(collectionName, operation, [], env);
 };

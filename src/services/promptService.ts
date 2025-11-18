@@ -20,7 +20,7 @@ type Prompt = {
         validate?: (val: string) => boolean | string;
       }
   )[];
-  validate?: (val: string | Record<string, string>) => boolean | string;
+  validate?: (val: never) => boolean | string;
 };
 
 export const askForOption = (message: string, options: string[]) => {
@@ -30,35 +30,20 @@ export const askForOption = (message: string, options: string[]) => {
   });
 };
 
-export const askForParams = (message: string, options: PromptParam[]) => {
+export const askForParams = async (message: string, params: PromptParam[]) => {
+  if (!params.some((param) => !param.disabled)) {
+    return {};
+  }
   return buildPrompt<Record<string, string>>('form', {
     message,
-    choices: options.map((option) => ({
-      name: option.name,
-      initial: option.defaultValue,
-      disabled: option.disabled ? 'Hidden' : false,
-      validate: (val) => validateOption(val, option),
+    choices: params.map((param) => ({
+      name: param.name,
+      initial: param.defaultValue,
+      disabled: param.disabled ? 'Hidden' : false,
+      validate: (val) => validateFormParam(val, param),
     })),
-    validate: (val) => {
-      if (typeof val === 'string') {
-        // Making typescript happy
-        return false;
-      }
-      const hasInvalidOption = options.some(
-        (option) => !validateOption(val[option.name], option)
-      );
-      return hasInvalidOption
-        ? 'Fill all required fields before submitting'
-        : true;
-    },
+    validate: (val) => validateForm(val, params),
   });
-};
-
-const validateOption = (val: string, option: PromptParam) => {
-  if (option.optional || option.disabled) {
-    return true;
-  }
-  return Boolean(val.trim());
 };
 
 const buildPrompt = async <T>(promptType: PromptType, opts: Prompt) => {
@@ -72,4 +57,18 @@ const buildPrompt = async <T>(promptType: PromptType, opts: Prompt) => {
       validate: opts.validate,
     })
   ).response;
+};
+
+const validateForm = (val: Record<string, string>, params: PromptParam[]) => {
+  const hasInvalidParam = params.some(
+    (param) => !validateFormParam(val[param.name], param)
+  );
+  return hasInvalidParam ? 'Fill all required fields before submitting' : true;
+};
+
+const validateFormParam = (val: string, option: PromptParam) => {
+  if (option.optional || option.disabled) {
+    return true;
+  }
+  return Boolean(val.trim());
 };

@@ -5,11 +5,12 @@ import { hideBin } from 'yargs/helpers';
 import { listCollections } from '@src/handlers/listCollections';
 import { listOperations } from '@src/handlers/listOperations';
 import { performOperation } from '@src/handlers/performOperation';
+import { listEnvironments } from './handlers/listEnvironments';
 
 yargs(hideBin(process.argv))
   .command(
     '$0 [collection] [operation] [params...]',
-    'Make an HTTP request or list operations',
+    'Make an HTTP request',
     (yargs) => {
       return yargs
         .positional('collection', {
@@ -21,6 +22,10 @@ yargs(hideBin(process.argv))
         .positional('params', {
           type: 'string',
           array: true,
+        })
+        .option('env', {
+          type: 'string',
+          alias: 'e',
         });
     },
     async (argv) => {
@@ -29,15 +34,21 @@ yargs(hideBin(process.argv))
         return;
       }
 
+      if (!argv.env) {
+        await listEnvironments(argv.collection);
+        return;
+      }
+
       if (!argv.operation) {
-        await listOperations(argv.collection);
+        await listOperations(argv.collection, argv.env);
         return;
       }
 
       await performOperation(
         argv.collection,
         argv.operation,
-        argv.params ?? []
+        argv.params ?? [],
+        argv.env
       );
     }
   )

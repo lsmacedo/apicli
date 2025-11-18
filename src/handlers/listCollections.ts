@@ -1,6 +1,6 @@
 import { getCollectionsList } from '@src/services/collectionService';
 import { askForOption } from '@src/services/promptService';
-import { listOperations } from '@src/handlers/listOperations';
+import { listEnvironments } from '@src/handlers/listEnvironments';
 
 export const listCollections = async () => {
   const collections = await getCollectionsList();
@@ -12,5 +12,5 @@ export const listCollections = async () => {
 
   const collectionName = await askForOption('Pick a collection', collections);
 
-  await listOperations(collectionName);
+  await listEnvironments(collectionName);
 };
